@@ -227,16 +227,28 @@ func (m *EngineManager) DownloadOne(ctx context.Context, id string, storeBaseDir
 		hasSubtitle = "nosub"
 	}
 
-	//新建下载目录名
-	folderName := fmt.Sprintf(
-		"%s%s-%s-%s-%s",
-		strings.ToUpper(prefix),
-		number,
-		strings.ReplaceAll(workInfo.Release, "-", ""),
-		hasSubtitle,
-		//修正标题 移除目录不支持的特殊字符
-		utils.NormalDirPathStr(strings.ReplaceAll(workInfo.Title, "/", "")),
-	)
+	//新建下载目录名 - 根据配置选择命名风格
+	var folderName string
+	rjCode := strings.ToUpper(prefix) + number
+	normalizedTitle := utils.NormalDirPathStr(strings.ReplaceAll(workInfo.Title, "/", ""))
+
+	switch strings.ToLower(m.Config.Downloader.FolderNameStyle) {
+	case "simple":
+		// 仅 RJ 号: RJ01037721
+		folderName = rjCode
+	case "rj_title":
+		// RJ 号 + 标题: RJ01037721-【标题】
+		folderName = fmt.Sprintf("%s-%s", rjCode, normalizedTitle)
+	default:
+		// full (默认): RJ01037721-20230320-nosub-【标题】
+		folderName = fmt.Sprintf(
+			"%s-%s-%s-%s",
+			rjCode,
+			strings.ReplaceAll(workInfo.Release, "-", ""),
+			hasSubtitle,
+			normalizedTitle,
+		)
+	}
 	defer func() {
 		//递归的移除空目录
 		utils.RemoveEmptyDirs(folderName)

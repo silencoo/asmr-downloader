@@ -89,6 +89,8 @@ func InitConfig(reader *bufio.Reader, configFile string) {
 
 	syncWantedSize := prompt(reader, "同步容量限制（1MB/GB/TB/PB，默认：200MB）: ", "200MB")
 	preferMedia := prompt(reader, "优先媒体格式 [all | mp3>wav>flac]（默认：all）: ", "all")
+	folderNameStyle := prompt(reader, "文件夹命名风格 [full | simple | rj_title]（默认：simple）: ", "simple")
+	sanitizeFilename := prompt(reader, "规范化文件名(替换非法字符) [y/n]（默认：y）: ", "y")
 
 	syncQPS := promptFloat(reader, "同步请求 QPS（默认：2）: ", 2)
 	syncJitterMin := promptInt(reader, "同步请求抖动最小值（毫秒，默认：100）: ", 100)
@@ -109,6 +111,8 @@ func InitConfig(reader *bufio.Reader, configFile string) {
 	viper.Set("downloader.sync_data_folder", syncDataFolder)
 	viper.Set("downloader.sync_wanted_size", syncWantedSize)
 	viper.Set("downloader.prefer_media", preferMedia)
+	viper.Set("downloader.folder_name_style", folderNameStyle)
+	viper.Set("downloader.sanitize_filename", strings.ToLower(sanitizeFilename) == "y")
 
 	viper.Set("limit.sync_qps", syncQPS)
 	viper.Set("limit.sync_jitter_min", syncJitterMin)

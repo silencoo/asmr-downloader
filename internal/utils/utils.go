@@ -96,13 +96,27 @@ func IsValidDlsiteID(id string) (isValid bool, prefix string, number string, err
 
 }
 
-// NormalDirPathStr 去除可能导致目录创建失败的字符串
-func NormalDirPathStr(path string) string {
-
-	for _, str := range []string{"?", "<", ">", ":", "*", "|", " "} {
-		path = strings.Replace(path, str, "_", -1)
+// NormalDirPathStr 规范化目录/文件名，替换非法字符并限制长度
+// 非法字符: \ / : * ? | > < "
+// 注意: 此函数仅用于规范化单个文件/文件夹名称，不要对完整路径使用！
+// 最大长度: 255字符
+func NormalDirPathStr(name string) string {
+	// 替换所有非法字符为下划线
+	illegalChars := []string{"\\", "/", ":", "*", "?", "|", ">", "<", "\""}
+	for _, str := range illegalChars {
+		name = strings.Replace(name, str, "_", -1)
 	}
-	return strings.TrimSpace(path)
+	
+	// 去除首尾空白
+	name = strings.TrimSpace(name)
+	
+	// 限制长度为255字符 (文件系统限制)
+	runes := []rune(name)
+	if len(runes) > 255 {
+		name = string(runes[:255])
+	}
+	
+	return name
 }
 
 func FilterList[T any](list []T, keep func(T) bool) []T {

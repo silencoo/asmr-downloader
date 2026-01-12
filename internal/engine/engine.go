@@ -227,16 +227,33 @@ func (m *EngineManager) DownloadOne(ctx context.Context, id string, storeBaseDir
 		hasSubtitle = "nosub"
 	}
 
-	//新建下载目录名
-	folderName := fmt.Sprintf(
-		"%s%s-%s-%s-%s",
-		strings.ToUpper(prefix),
-		number,
-		strings.ReplaceAll(workInfo.Release, "-", ""),
-		hasSubtitle,
-		//修正标题 移除目录不支持的特殊字符
-		utils.NormalDirPathStr(strings.ReplaceAll(workInfo.Title, "/", "")),
-	)
+	//新建下载目录名 - 根据配置选择命名风格
+	var folderName string
+	rjCode := strings.ToUpper(prefix) + number
+	
+	// 根据配置决定是否规范化标题
+	normalizedTitle := strings.ReplaceAll(workInfo.Title, "/", "")
+	if m.Config.Downloader.SanitizeFilename {
+		normalizedTitle = utils.NormalDirPathStr(normalizedTitle)
+	}
+
+	switch strings.ToLower(m.Config.Downloader.FolderNameStyle) {
+	case "simple":
+		// 仅 RJ 号: RJ01037721
+		folderName = rjCode
+	case "rj_title":
+		// RJ 号 + 标题: RJ01037721-【标题】
+		folderName = fmt.Sprintf("%s-%s", rjCode, normalizedTitle)
+	default:
+		// full (默认): RJ01037721-20230320-nosub-【标题】
+		folderName = fmt.Sprintf(
+			"%s-%s-%s-%s",
+			rjCode,
+			strings.ReplaceAll(workInfo.Release, "-", ""),
+			hasSubtitle,
+			normalizedTitle,
+		)
+	}
 	defer func() {
 		//递归的移除空目录
 		utils.RemoveEmptyDirs(folderName)
@@ -337,16 +354,26 @@ func (m *EngineManager) filterTargetAudioFormate(urls [][]string) [][]string {
 
 func (m *EngineManager) ensureDirExists(tracks []model.Track, storeBaseDir string) ([][]string, error) {
 	path := storeBaseDir
-	path = utils.NormalDirPathStr(path)
+	// 注意：不对完整路径应用 NormalDirPathStr，只对单独的文件/文件夹名称应用
 	_ = os.MkdirAll(path, os.ModePerm)
 	//url,path,title
 	var needDownloadUrls [][]string
 
 	for _, t := range tracks {
 		if t.Type != "folder" {
-			needDownloadUrls = append(needDownloadUrls, []string{t.MediaDownloadURL, path, t.Title})
+			// 根据配置决定是否规范化文件名
+			fileName := t.Title
+			if m.Config.Downloader.SanitizeFilename {
+				fileName = utils.NormalDirPathStr(fileName)
+			}
+			needDownloadUrls = append(needDownloadUrls, []string{t.MediaDownloadURL, path, fileName})
 		} else {
-			needDownUrl, _ := m.ensureDirExists(t.Children, fmt.Sprintf("%s/%s", path, t.Title))
+			// 根据配置决定是否规范化子目录名
+			subDirName := t.Title
+			if m.Config.Downloader.SanitizeFilename {
+				subDirName = utils.NormalDirPathStr(subDirName)
+			}
+			needDownUrl, _ := m.ensureDirExists(t.Children, fmt.Sprintf("%s/%s", path, subDirName))
 			needDownloadUrls = append(needDownloadUrls, needDownUrl...)
 		}
 	}

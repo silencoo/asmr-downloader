@@ -11,13 +11,15 @@ type User struct {
 }
 
 type Downloader struct {
-	ApiUrl         string `mapstructure:"api_url"`
-	ProxyUrl       string `mapstructure:"proxy_url"`
-	MaxWorkers     int    `mapstructure:"max_workers"`
-	MaxRetries     int    `mapstructure:"max_retries"`
-	SyncDataFolder string `mapstructure:"sync_data_folder"`
-	SyncWantedSize string `mapstructure:"sync_wanted_size"`
-	PreferMedia    string `mapstructure:"prefer_media"`
+	ApiUrl           string `mapstructure:"api_url"`
+	ProxyUrl         string `mapstructure:"proxy_url"`
+	MaxWorkers       int    `mapstructure:"max_workers"`
+	MaxRetries       int    `mapstructure:"max_retries"`
+	SyncDataFolder   string `mapstructure:"sync_data_folder"`
+	SyncWantedSize   string `mapstructure:"sync_wanted_size"`
+	PreferMedia      string `mapstructure:"prefer_media"`
+	FolderNameStyle  string `mapstructure:"folder_name_style"`  // full | simple | rj_title
+	SanitizeFilename bool   `mapstructure:"sanitize_filename"` // 规范化文件名，默认开启
 }
 
 type Limit struct {

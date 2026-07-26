@@ -106,16 +106,16 @@ func NormalDirPathStr(name string) string {
 	for _, str := range illegalChars {
 		name = strings.Replace(name, str, "_", -1)
 	}
-	
+
 	// 去除首尾空白
 	name = strings.TrimSpace(name)
-	
+
 	// 限制长度为255字符 (文件系统限制)
 	runes := []rune(name)
 	if len(runes) > 255 {
 		name = string(runes[:255])
 	}
-	
+
 	return name
 }
 
@@ -267,13 +267,14 @@ func PromptConfirm(message string) bool {
 // Byte2FileSize 将字节数转换为人类可读的文件大小字符串
 func Byte2FileSize(size int64) string {
 	units := []string{"B", "KB", "MB", "GB", "TB"}
+	value := float64(size)
 	for _, unit := range units {
-		if size < 1024 {
-			return fmt.Sprintf("%.2f %s", size, unit)
+		if value < 1024 {
+			return fmt.Sprintf("%.2f %s", value, unit)
 		}
-		size /= 1024
+		value /= 1024
 	}
-	return fmt.Sprintf("%.2f %s", size, units[len(units)-1])
+	return fmt.Sprintf("%.2f %s", value, units[len(units)-1])
 }
 
 // GetDirSize 递归计算目录大小（包含子目录）

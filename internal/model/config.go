@@ -18,8 +18,9 @@ type Downloader struct {
 	SyncDataFolder   string `mapstructure:"sync_data_folder"`
 	SyncWantedSize   string `mapstructure:"sync_wanted_size"`
 	PreferMedia      string `mapstructure:"prefer_media"`
-	FolderNameStyle  string `mapstructure:"folder_name_style"`  // full | simple | rj_title
+	FolderNameStyle  string `mapstructure:"folder_name_style"` // full | simple | rj_title
 	SanitizeFilename bool   `mapstructure:"sanitize_filename"` // 规范化文件名，默认开启
+	BrowsePageSize   int    `mapstructure:"browse_page_size"`  // 桌面站点浏览每页作品数
 }
 
 type Limit struct {

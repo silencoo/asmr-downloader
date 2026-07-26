@@ -34,8 +34,9 @@ var listenPort int
 //	-p, --port int：服务器端口（默认 9999）
 //	-d, --dir string：数据目录（默认是初始化配置的 syncdata 目录）
 var listenCmd = &cobra.Command{
-	Use:   "listen",
-	Short: "启动WebUI以展示/播放下载的音声作品",
+	Use:     "listen",
+	Aliases: []string{"web"},
+	Short:   "启动WebUI以展示/播放下载的音声作品",
 	Long: `
 listen 命令用于启动一个 Web UI 服务器，用于展示和播放下载的音声作品。
 
@@ -124,6 +125,7 @@ listen 命令用于启动一个 Web UI 服务器，用于展示和播放下载�
 			}
 			c.JSON(http.StatusOK, wrapResponse(pageData))
 		})
+		registerGUIRoutes(r, db, absDataFolder)
 
 		addr := fmt.Sprintf(":%d", port)
 		srv := &http.Server{

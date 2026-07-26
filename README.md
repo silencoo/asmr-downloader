@@ -1,379 +1,199 @@
-## 项目简介
+# ASMRoner
 
-ASMRoner是一款基于Go语言开发的多功能命令行工具，专注于音声作品的搜索、下载、同步。它提供了直观的命令行接口和简单的Web界面，支持高级搜索语法、批量下载、状态跟踪以及统计分析等功能，为ASMR爱好者提供高效便捷的作品下载体验。
+面向 Windows 的 ASMR 音声浏览、在线播放、下载与本地管理工具。项目以原生桌面应用为主要入口，同时保留完整 CLI 和兼容 Web 播放模式。
 
-## 衍生作品
-一个简洁干净的听ASMR.ONE的网页
-https://asmr.furina.in
+桌面端直接调用公开 API，以本地界面呈现作品、热门、社团、标签、声优、随机、登录与 About；点击作品即可进入详情、浏览分层音轨并在线播放，不是 iframe 网页套壳。
 
-## 功能特性
-
-### 搜索功能
-- 支持单个RJID搜索
-- 支持批量RJID搜索（逗号分隔）
-- 支持高级搜索语法（关键字过滤、排除词、时长限制等）
-- 搜索结果可导出为CSV/JSON格式
-- 搜索并下载功能一体化
-
-### 下载功能
-- 单个RJID下载
-- 批量RJID下载
-- 热门作品下载（hot100模式）
-- 搜索结果直接下载
-- 自定义下载目录
-- 自动处理请求调度、限流、重试机制
-
-### 同步功能
-- 元数据同步与管理
-- 批量下载控制
-- 下载状态跟踪（完成、失败、等待）
-- 失败任务重试
-- 同步进度统计
-- 下载数据导出
-
-### Web界面
-- 可视化浏览下载作品
-- 浏览器内直接播放音频
-- 响应式设计，适配不同设备
-- 内嵌资源加载，无需额外配置
-
-### 配置管理
-- 交互式配置初始化
-- 支持覆盖已有配置
-- 丰富的配置选项（账号、限流、目录等）
-- 配置文件自动管理
-
-### 统计与报告
-- 作品元数据统计
-- 下载状态统计
-- 同步进度分析
-- 详细的下载日志
+![ASMRoner 桌面端预览](dist/desktop-preview.png)
 
 ## 快速开始
 
-### 安装方法
+### 直接使用 Windows 桌面版
 
-1. **克隆项目**
-```bash
-git clone https://github.com/silencoo/asmr-downloader.git
-cd asmr-downloader
+运行构建产物：
+
+```powershell
+.\dist\ASMRoner.exe
 ```
 
-2. **安装依赖**
-```bash
+首次启动后在“设置”中确认账号、下载目录和网络选项。公开服务可使用默认 `guest` 账号。
+
+### 从源码构建
+
+需要 Go 1.25、Wails CLI 和 WebView2 Runtime。
+
+```powershell
 go mod download
+powershell -ExecutionPolicy Bypass -File .\desktop\build.ps1
+.\dist\ASMRoner.exe
 ```
 
-3. **构建项目**
-```bash
-go build -o asmroner
-```
+构建脚本会生成 `dist/ASMRoner.exe`。桌面资源嵌入 EXE，正常使用时不会启动本地 HTTP 服务或外部浏览器。
 
-4. **初始化配置**
+## 桌面端一览
+
+| 功能 | 说明 |
+| --- | --- |
+| 原生站点浏览 | 作品、热门、社团、标签、声优、随机、登录和 About 横向标签 |
+| 作品详情 | 封面、评分、社团、声优、标签、时长、下载量和分层文件列表 |
+| 在线播放 | 直接播放站点音轨，自动组成播放队列并在曲目结束后继续 |
+| 下载管理 | 单部或批量加入队列，显示进度、完成、失败与取消状态 |
+| 本地资料库 | 扫描已下载作品，按作品查看和播放本地音轨 |
+| 响应式密度 | 可选每页 20 / 30 / 40 / 50 部；全屏时增加列数而不拉伸模糊封面 |
+| 桌面体验 | 粉色原生标题栏、单实例保护、系统目录选择器和正式应用图标 |
+
+<details>
+<summary><strong>查看完整功能列表</strong></summary>
+
+### 搜索与浏览
+
+- 支持 RJ / BJ / VJ 编号、标题、社团、标签和声优搜索
+- 支持作品、热门和随机发现
+- 支持上一页、下一页、指定页码和每页数量
+- 社团、标签、声优目录支持本地筛选和分页
+- About 原生展示 DMCA、Bug Bounty、联系方式和镜像
+
+### 下载与同步
+
+- 单个编号、批量编号、搜索结果和热门作品下载
+- 自定义保存目录、并发数、重试次数、QPS 和代理
+- 可配置优先媒体格式、文件夹命名和非法字符清理
+- 下载状态跟踪、失败任务重试、统计报告和记录导出
+
+### 本地播放
+
+- 自动扫描本地作品与音轨
+- 桌面底部播放器和连续播放队列
+- 保留 `listen` 命令提供兼容 Web 播放界面
+
+</details>
+
+<details>
+<summary><strong>CLI 使用方法</strong></summary>
+
+### 初始化配置
+
 ```bash
 ./asmroner config
 ```
 
-### 基本使用
-
-```bash
-# 查看帮助信息
-./asmroner --help
-
-# 搜索作品
-./asmroner search "护士"
-
-# 下载单个作品
-./asmroner download RJ01037721
-
-# 下载热门作品
-./asmroner download hot100 -n 10
-
-# 启动Web界面
-./asmroner listen
-```
-
-## 命令详解
-
-### config - 配置管理
-
-```bash
-# 初始化或重置配置
-./asmroner config
-```
-
-交互式配置流程，包含以下选项：
-- 用户账号与密码
-- API接口地址
-- 代理服务配置
-- 最大并发数与重试次数
-- 同步数据目录
-- 下载容量限制
-- 优先媒体格式
-- QPS限流设置
-- 请求抖动配置
-
-配置文件路径：`~/.asmroner/config.toml`
-
-### search - 搜索命令
+### 搜索
 
 ```bash
 # 基本搜索
 ./asmroner search "护士" -c 20
 
-# 高级搜索语法(和asmr.one的高级搜索类似,只不过去掉了前后$,多条件用,代替)
+# 高级筛选
 ./asmroner search "护士,-中出@duration:1h" -c 50
 
 # 搜索并下载
 ./asmroner search download "护士" -d ./downloads -s 20
 
-# 搜索并导出
+# 导出 CSV / JSON
 ./asmroner search export "护士" -n 100 -f data.json
 ```
 
-#### 选项说明：
-- `-c, --count`：搜索结果数量（默认10）
-
-#### 子命令：
-- `download`：搜索并下载
-    - `-d, --dir`：下载目录
-    - `-s, --size`：下载数量（默认100）
-- `export`：搜索并导出
-    - `-f, --file`：导出文件名（支持.csv/.json）
-    - `-n, --num`：导出数量（默认100）
-
-### download - 下载命令
+### 下载
 
 ```bash
-# 单个RJID下载
+# 单个作品
 ./asmroner download RJ01037721 -d ./downloads
 
-# 批量RJID下载
+# 批量作品
 ./asmroner download RJ01037721,RJ01037722,RJ01037723 -d ./downloads
 
-# 热门作品下载
+# 热门作品
 ./asmroner download hot100 -n 20 -d ./downloads
 ```
 
-#### 选项说明：
-- `-d, --dir`：下载保存目录（默认当前目录）
-- `-n, --number`：热门模式下载数量（仅hot100模式有效）
-
-### sync - 同步命令
+### 同步与报告
 
 ```bash
-# 查看同步命令帮助
-./asmroner sync --help
-
-# 同步下载作品
 ./asmroner sync download --folder ./downloads
-
-# 重试失败的下载
 ./asmroner sync retry --folder ./downloads
-
-# 导出下载记录
 ./asmroner sync export --status failed --file ./failed_downloads.csv
-
-# 查看统计报告
 ./asmroner sync report
 ```
 
-#### 子命令：
-- `download`：同步下载作品
-- `retry`：重试失败下载
-- `export`：导出下载记录
-- `report`：查看统计报告
-
-### listen - Web界面
+### 启动桌面端或兼容 Web 播放器
 
 ```bash
-# 启动Web界面
-./asmroner listen -p 8080
-
-# 指定数据目录
+./asmroner gui
 ./asmroner listen -p 8080 ./syncdata
 ```
 
-#### 选项说明：
-- `-p, --port`：服务器端口（默认9999）
+</details>
 
-启动后访问：`http://localhost:9999`
+<details>
+<summary><strong>配置、目录与技术说明</strong></summary>
 
-### version - 版本信息
+### 配置
 
-```bash
-# 查看版本信息
-./asmroner version
-```
+配置使用 TOML 格式。桌面应用会把配置保存在当前用户的系统配置目录，默认下载位置为 `Downloads/ASMRoner`，不会依赖程序启动目录。
 
-## 配置文件
+主要可配置项包括：
 
-配置文件采用TOML格式，默认位于`~/.asmroner/config.toml`。以下是主要配置项：
+- asmr.one 账号与密码
+- 自定义 API 地址和 HTTP / SOCKS5 代理
+- 下载目录、并发、重试与 QPS
+- 优先音频格式和文件夹命名
+- 文件名清理和站点浏览每页数量
 
-```toml
-# 用户账号配置
-[account]
-user = "guest"
-password = "guest"
+### 项目结构
 
-# API配置
-[api]
-url = "https://api.example.com"
-
-# 下载配置
-[downloader]
-sync_data_folder = "./syncdata"
-max_size = 10737418240  # 10GB
-worker_count = 3
-prefer_format = "mp3"
-
-# 限流配置
-[limiter]
-sync_qps = 2
-sync_jitter_min = 100
-sync_jitter_max = 500
-download_qps = 0.2
-download_jitter_min = 2000
-download_jitter_max = 5000
-```
-
-## 项目结构
-
-```
+```text
 asmroner/
-├── cmd/                # 命令行接口
-│   ├── config.go      # 配置命令
-│   ├── download.go    # 下载命令
-│   ├── listen.go      # Web服务
-│   ├── root.go        # 根命令
-│   ├── search.go      # 搜索命令
-│   └── sync.go        # 同步命令
-├── internal/          # 内部包
-│   ├── consts/        # 常量定义
-│   ├── database/      # 数据库操作
-│   ├── engine/        # 核心引擎
-│   ├── logger/        # 日志记录
-│   ├── model/         # 数据模型
-│   └── utils/         # 工具函数
-├── syncdata/          # 同步数据存储目录
-├── webui/             # Web界面
-├── .asmroner-data/    # 配置和数据库
-├── go.mod             # Go模块定义
-├── go.sum             # 依赖校验和
-├── main.go            # 程序入口
-└── version.go         # 版本信息
+├── cmd/                  # CLI 命令
+├── desktop/              # Wails 原生桌面应用
+│   ├── frontend/dist/    # 嵌入式桌面 UI
+│   └── build/            # Windows 图标与构建资源
+├── internal/             # API、下载、数据库和模型
+├── webui/                # 兼容 Web 播放界面
+├── dist/                 # Windows 构建产物与桌面预览图
+├── main.go
+└── go.mod
 ```
 
-## 技术栈
+### 技术栈
 
-| 技术/组件 | 用途 |
-|---------|------|
-| Go语言  | 后端开发 |
-| GORM    | ORM框架 |
-| SQLite  | 数据库存储 |
-| Cobra   | 命令行框架 |
-| Viper   | 配置管理 |
-| Gin     | Web框架 |
-| Tailwind CSS | Web界面样式 |
-| Plyr    | Web音频播放器 |
+| 组件 | 用途 |
+| --- | --- |
+| Go 1.25 | 核心逻辑、API 客户端与下载器 |
+| Wails v2 | Windows 原生窗口和 Go / UI 桥接 |
+| WebView2 | 嵌入式桌面界面渲染 |
+| SQLite / GORM | 本地数据与同步状态 |
+| Cobra / Viper | CLI 与配置 |
+| Gin | 兼容 Web 模式 |
 
-## 数据模型
+</details>
 
-### MetadataWork（作品元数据）
+<details>
+<summary><strong>常见问题</strong></summary>
 
-| 字段名 | 类型 | 描述 |
-|-------|------|------|
-| ID | int | 主键ID |
-| Title | string | 作品标题 |
-| CircleID | int | 发布者ID |
-| Name | string | 作品名称 |
-| Nsfw | bool | 是否为成人内容 |
-| Release | string | 发布日期 |
-| DlCount | int | 下载次数 |
-| Price | int | 价格 |
-| ReviewCount | int | 评论数 |
-| RateCount | int | 评分人数 |
-| RateAverage2Dp | float64 | 平均评分（2位小数） |
-| HasSubtitle | bool | 是否有字幕 |
-| CreateDate | string | 创建日期 |
-| Vas | string | 声优信息 |
-| Tags | string | 标签 |
-| Duration | int | 时长 |
-| SourceType | string | 源类型 |
-| SourceID | string | 源ID |
+### 桌面端无法启动
 
-### WorkSyncInfo（同步信息）
+确认系统已安装 Microsoft Edge WebView2 Runtime，并尝试从终端运行 `dist/ASMRoner.exe` 查看错误。
 
-| 字段名 | 类型 | 描述 |
-|-------|------|------|
-| ID | int | 主键ID |
-| MetadataWorkId | int | 关联的元数据ID |
-| SourceId | string | 源ID |
-| DirSize | int64 | 目录大小 |
-| Status | string | 状态（PENDING/COMPLETED/FAILED） |
-| FilePath | string | 本地保存路径 |
-| FailReason | string | 失败原因 |
-| RetryCount | int | 重试次数 |
-| FailedAt | time.Time | 最后失败时间 |
+### 搜索或详情读取失败
 
-## 常见问题
+检查网络、代理和 API 设置。也可以先在“登录”标签重新验证账号。
 
-### 1. 配置文件未找到
+### 下载失败
 
-**问题**：启动命令时提示"配置文件未找到 (config.toml)"
+在“下载任务”查看错误；CLI 用户可运行 `asmroner sync retry`，并检查 `download_errors.log`。
 
-**解决方案**：运行`./asmroner config`初始化配置文件
+### 找不到已下载作品
 
-### 2. 下载失败
+确认桌面设置中的保存位置正确。资料库会从该目录扫描作品。
 
-**问题**：下载任务失败，显示错误信息
-
-**解决方案**：使用`sync retry`命令重试失败的下载任务，或查看日志文件`download_errors.log`获取详细错误信息
-
-### 3. Web界面无法访问
-
-**问题**：无法访问`http://localhost:9999`
-
-**解决方案**：确保程序正在运行，检查配置文件中的端口设置，或使用`-p`选项指定端口
-
-### 4. 搜索结果为空
-
-**问题**：搜索返回空结果
-
-**解决方案**：检查查询语法是否正确，尝试简化搜索条件，或检查网络连接
-
-### 5. 使用样图
-
-![配置初始化界面](dist/config.png)
-![搜索结果表格](dist/search.png)
-![下载进度](dist/download.png)
-![Web 播放界面](dist/listen.png)
-![Web 播放界面-曲目列表](dist/listen2.png)
-![同步元数据列表](dist/sync.png)
-![同步下载进度](dist/sync-down.png)
-![同步统计报告](dist/sync-report.png)
-![失败下载重试](dist/sync-retry.png)
-
-## 贡献指南
-
-我们欢迎社区贡献！如果您想为ASMRoner做出贡献，请按照以下步骤：
-
-1. Fork项目
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启一个Pull Request
+</details>
 
 ## 许可证
 
-本项目采用MIT许可证，详情请查看LICENSE文件。
+本项目采用 [MIT License](LICENSE)。
 
-## 致谢
+## 来源与相关项目
 
-感谢所有为ASMRoner项目做出贡献的开发者和用户！
+本仓库是在 [silencoo/asmr-downloader](https://github.com/silencoo/asmr-downloader) 基础上的 fork 与二次开发。另可参考相关 Web 客户端 [asmr.furina.in](https://asmr.furina.in)。
 
----
-
-**ASMRoner** - 每天晚上都有不同的妹妹陪你入睡:)
-
-*最后更新：2026年7月*
+ASMRoner 与 asmr.one 没有官方隶属关系。请遵守所在地法律、站点规则和内容版权要求。

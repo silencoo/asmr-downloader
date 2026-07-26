@@ -61,7 +61,7 @@ asmroner 是一个基于Go的多功能命令行工，提供以下功能：
 		cmd.Help()
 	},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if cmd.Name() == "config" || cmd.Name() == "help" {
+		if cmd.Name() == "config" || cmd.Name() == "gui" || cmd.Name() == "help" {
 			return
 		}
 

@@ -43,24 +43,10 @@ type WorkInfo struct {
 		VoteRank   int    `json:"voteRank"`
 		VoteStatus int    `json:"voteStatus"`
 	} `json:"tags"`
-	LanguageEditions []struct {
-		Lang         string `json:"lang"`
-		Label        string `json:"label"`
-		Workno       string `json:"workno"`
-		EditionID    int    `json:"edition_id"`
-		EditionType  string `json:"edition_type"`
-		DisplayOrder int    `json:"display_order"`
-	} `json:"language_editions"`
-	OriginalWorkno            string `json:"original_workno"`
-	OtherLanguageEditionsInDb []struct {
-		ID         int    `json:"id"`
-		Lang       string `json:"lang"`
-		Title      string `json:"title"`
-		SourceID   string `json:"source_id"`
-		IsOriginal bool   `json:"is_original"`
-		SourceType string `json:"source_type"`
-	} `json:"other_language_editions_in_db"`
-	TranslationInfo struct {
+	LanguageEditions          interface{} `json:"language_editions"`
+	OriginalWorkno            string      `json:"original_workno"`
+	OtherLanguageEditionsInDb interface{} `json:"other_language_editions_in_db"`
+	TranslationInfo           struct {
 		Lang                    string        `json:"lang"`
 		IsChild                 bool          `json:"is_child"`
 		IsParent                bool          `json:"is_parent"`

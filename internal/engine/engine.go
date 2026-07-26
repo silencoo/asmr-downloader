@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -37,6 +38,38 @@ type EngineManager struct {
 	ApiUrl                string
 	MetadataWorkBatchChan chan []model.MetadataWork
 	SyncWorkerPool        *pond.Pool
+	OnDownloadPlan        func([]DownloadProgress)
+	OnDownloadProgress    func(DownloadProgress)
+	OnDownloadRetry       func(DownloadRetry)
+}
+
+type DownloadProgress struct {
+	FileKey         string
+	FileName        string
+	DownloadedBytes int64
+	TotalBytes      int64
+	Completed       bool
+}
+
+type DownloadRetry struct {
+	FileKey  string
+	FileName string
+	Attempt  int
+	Wait     time.Duration
+	Reason   string
+}
+
+type progressWriter struct {
+	writer  io.Writer
+	onWrite func(int64)
+}
+
+func (w *progressWriter) Write(data []byte) (int, error) {
+	written, err := w.writer.Write(data)
+	if written > 0 && w.onWrite != nil {
+		w.onWrite(int64(written))
+	}
+	return written, err
 }
 
 var defaultHeaders = map[string]string{
@@ -60,7 +93,7 @@ func NewEngineManager() (*EngineManager, error) {
 
 	workers := config.Downloader.MaxWorkers
 	pool := pond.NewPool(workers)
-	downloadPool := pond.NewPool(workers + 1)
+	downloadPool := pond.NewPool(mediaDownloadWorkers(workers))
 	syncPool := pond.NewPool(2)
 
 	client, err := buildRestyClient(config)
@@ -71,7 +104,7 @@ func NewEngineManager() (*EngineManager, error) {
 	apiUrl := GetRespFastestSiteUrl()
 
 	engine := &EngineManager{
-		DB:           database.Database,
+		DB: database.Database,
 		DownLimiter: NewSmartLimiter(
 			config.Limit.DownloadQPS,
 			1,
@@ -93,6 +126,10 @@ func NewEngineManager() (*EngineManager, error) {
 	}
 
 	return engine, nil
+}
+
+func mediaDownloadWorkers(configured int) int {
+	return min(max(configured, 1), 3)
 }
 
 func buildRestyClient(config *model.Config) (*resty.Client, error) {
@@ -234,7 +271,7 @@ func (m *EngineManager) DownloadOne(ctx context.Context, id string, storeBaseDir
 	//新建下载目录名 - 根据配置选择命名风格
 	var folderName string
 	rjCode := strings.ToUpper(prefix) + number
-	
+
 	// 根据配置决定是否规范化标题
 	normalizedTitle := strings.ReplaceAll(workInfo.Title, "/", "")
 	if m.Config.Downloader.SanitizeFilename {
@@ -272,13 +309,21 @@ func (m *EngineManager) DownloadOne(ctx context.Context, id string, storeBaseDir
 	}
 	//过滤掉不需要的格式
 	needDownloadUrls = m.filterTargetAudioFormate(needDownloadUrls)
+	downloadPlan := m.buildDownloadPlan(ctx, needDownloadUrls)
+	if m.OnDownloadPlan != nil {
+		m.OnDownloadPlan(append([]DownloadProgress(nil), downloadPlan...))
+	}
 	//并行下载
 	pool := *m.DownloadPool
 	group := pool.NewGroup()
-	for _, url := range needDownloadUrls {
+	for index, url := range needDownloadUrls {
+		progress := downloadPlan[index]
+		if progress.Completed {
+			continue
+		}
 		//log.Println("Download file:", url[2])
 		group.SubmitErr(func() error {
-			return m.downloadFile(url[0], url[1], url[2])
+			return m.downloadFileWithExpectedSize(ctx, url[0], url[1], url[2], progress.TotalBytes)
 			//return nil
 		})
 	}
@@ -384,6 +429,69 @@ func (m *EngineManager) ensureDirExists(tracks []model.Track, storeBaseDir strin
 	return needDownloadUrls, nil
 }
 
+func (m *EngineManager) buildDownloadPlan(ctx context.Context, urls [][]string) []DownloadProgress {
+	plan := make([]DownloadProgress, len(urls))
+	if len(urls) == 0 {
+		return plan
+	}
+
+	workers := mediaDownloadWorkers(m.Config.Downloader.MaxWorkers)
+	sem := make(chan struct{}, workers)
+	var wait sync.WaitGroup
+	for index, target := range urls {
+		fileKey := filepath.Clean(filepath.Join(target[1], target[2]))
+		plan[index] = DownloadProgress{FileKey: fileKey, FileName: target[2]}
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			totalBytes := m.probeDownloadSize(ctx, target[0])
+			progress := DownloadProgress{
+				FileKey:    fileKey,
+				FileName:   target[2],
+				TotalBytes: totalBytes,
+			}
+			storePath := filepath.Join(target[1], target[2])
+			if totalBytes > 0 {
+				if info, err := os.Stat(storePath); err == nil && info.Size() == totalBytes {
+					progress.DownloadedBytes = totalBytes
+					progress.Completed = true
+				} else if info, err := os.Stat(storePath + ".part"); err == nil {
+					progress.DownloadedBytes = min(info.Size(), totalBytes)
+				}
+			} else if info, err := os.Stat(storePath + ".part"); err == nil {
+				progress.DownloadedBytes = info.Size()
+			}
+			plan[index] = progress
+		}()
+	}
+	wait.Wait()
+	return plan
+}
+
+func (m *EngineManager) probeDownloadSize(ctx context.Context, url string) int64 {
+	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	resp, err := m.Client.R().
+		SetContext(probeCtx).
+		SetDoNotParseResponse(true).
+		Head(url)
+	if err != nil || resp == nil || resp.RawResponse == nil {
+		return 0
+	}
+	defer resp.RawResponse.Body.Close()
+	if !resp.IsSuccess() || resp.RawResponse.ContentLength <= 0 {
+		return 0
+	}
+	return resp.RawResponse.ContentLength
+}
+
 func (m *EngineManager) GetVoiceTracks(id string) ([]model.Track, error) {
 	url := m.ApiUrl + consts.AsmrApiPath.TracksPath + id
 	headers := defaultHeaders
@@ -401,7 +509,7 @@ func (m *EngineManager) GetVoiceTracks(id string) ([]model.Track, error) {
 		return nil, err
 	}
 	if !resp.IsSuccess() {
-		return nil, errors.New("Request error,status code: " + string(resp.StatusCode()))
+		return nil, errors.New("Request error,status code: " + strconv.Itoa(resp.StatusCode()))
 	}
 	return result, nil
 }
@@ -424,7 +532,7 @@ func (m *EngineManager) GetWorkInfo(ctx context.Context, id string) (model.WorkI
 		return result, err
 	}
 	if !resp.IsSuccess() {
-		return result, errors.New("Request error,status code: " + string(resp.StatusCode()))
+		return result, errors.New("Request error,status code: " + strconv.Itoa(resp.StatusCode()))
 	}
 	return result, nil
 }
@@ -624,23 +732,218 @@ func (m *EngineManager) SyncRetryFaild() error {
 	return nil
 }
 
-func (m *EngineManager) downloadFile(url string, path string, fileName string) error {
-	// 使用 resty 或 http.Get 下载文件
-	var filePathToStore = path
-	var fileUrl = url
-	var storePath = filepath.Join(filePathToStore, fileName)
-	//使用 resty 下载文件
-	resp, err := m.Client.R().
-		SetOutput(storePath).
-		Get(fileUrl)
-	if err != nil {
-		logger.Error("下载文件失败", "err", err.Error())
-		return err
+func automaticRetryDelay(consecutiveNoProgress int, fastRetries int, progressMade bool) time.Duration {
+	if progressMade {
+		return 250 * time.Millisecond
 	}
-	if !resp.IsSuccess() {
-		return errors.New("Request error,status code: " + string(resp.StatusCode()))
+	if fastRetries < 1 {
+		fastRetries = 1
 	}
-	return nil
+	var seconds int
+	if consecutiveNoProgress <= fastRetries {
+		seconds = 1 << min(max(consecutiveNoProgress-1, 0), 3)
+	} else {
+		slowAttempt := consecutiveNoProgress - fastRetries
+		seconds = 5 * (1 << min(max(slowAttempt-1, 0), 3))
+		if seconds > 30 {
+			seconds = 30
+		}
+	}
+	jitter := time.Duration((consecutiveNoProgress*137)%500) * time.Millisecond
+	return time.Duration(seconds)*time.Second + jitter
+}
+
+func (m *EngineManager) downloadFile(ctx context.Context, url string, path string, fileName string) error {
+	return m.downloadFileWithExpectedSize(ctx, url, path, fileName, 0)
+}
+
+func (m *EngineManager) downloadFileWithExpectedSize(ctx context.Context, url string, path string, fileName string, expectedTotal int64) error {
+	storePath := filepath.Join(path, fileName)
+	partPath := storePath + ".part"
+	fileKey := filepath.Clean(storePath)
+	report := func(downloadedBytes int64, totalBytes int64, completed bool) {
+		if m.OnDownloadProgress != nil {
+			m.OnDownloadProgress(DownloadProgress{
+				FileKey:         fileKey,
+				FileName:        fileName,
+				DownloadedBytes: downloadedBytes,
+				TotalBytes:      totalBytes,
+				Completed:       completed,
+			})
+		}
+	}
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return fmt.Errorf("创建下载目录失败: %w", err)
+	}
+	if expectedTotal > 0 {
+		if info, err := os.Stat(storePath); err == nil && info.Size() == expectedTotal {
+			report(expectedTotal, expectedTotal, true)
+			return nil
+		}
+	}
+
+	fastRetries := m.Config.Downloader.MaxRetries
+	if fastRetries < 1 {
+		fastRetries = 1
+	}
+	var lastErr error
+	attempt := 0
+	consecutiveNoProgress := 0
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		offset := int64(0)
+		if info, err := os.Stat(partPath); err == nil {
+			offset = info.Size()
+		}
+		progressMade := false
+		request := m.Client.R().
+			SetContext(ctx).
+			SetDoNotParseResponse(true)
+		if offset > 0 {
+			request.SetHeader("Range", fmt.Sprintf("bytes=%d-", offset))
+		}
+		resp, err := request.Get(url)
+		if err != nil {
+			lastErr = err
+		} else if resp == nil || resp.RawResponse == nil {
+			lastErr = errors.New("empty download response")
+		} else {
+			statusCode := resp.StatusCode()
+			if statusCode == http.StatusRequestedRangeNotSatisfiable && offset > 0 {
+				_ = resp.RawResponse.Body.Close()
+				if expectedTotal > 0 && offset == expectedTotal {
+					if err := os.Remove(storePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+						return fmt.Errorf("替换旧文件失败: %w", err)
+					}
+					if err := os.Rename(partPath, storePath); err != nil {
+						return fmt.Errorf("完成下载文件失败: %w", err)
+					}
+					report(expectedTotal, expectedTotal, true)
+					return nil
+				}
+				if err := os.Remove(partPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("重置临时下载文件失败: %w", err)
+				}
+				lastErr = fmt.Errorf("request error,status code: %d", statusCode)
+			} else if !resp.IsSuccess() {
+				_ = resp.RawResponse.Body.Close()
+				lastErr = fmt.Errorf("request error,status code: %d", statusCode)
+				if statusCode < 500 &&
+					statusCode != http.StatusTooManyRequests &&
+					statusCode != http.StatusRequestTimeout &&
+					statusCode != http.StatusTooEarly {
+					return lastErr
+				}
+			} else {
+				if statusCode == http.StatusPartialContent && offset > 0 {
+					contentRange := resp.Header().Get("Content-Range")
+					expectedPrefix := fmt.Sprintf("bytes %d-", offset)
+					if contentRange != "" && !strings.HasPrefix(contentRange, expectedPrefix) {
+						_ = resp.RawResponse.Body.Close()
+						if err := os.Remove(partPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+							return fmt.Errorf("重置无效断点文件失败: %w", err)
+						}
+						lastErr = fmt.Errorf("invalid content range: %s", contentRange)
+						continue
+					}
+				}
+				flags := os.O_CREATE | os.O_WRONLY
+				if statusCode == http.StatusPartialContent && offset > 0 {
+					flags |= os.O_APPEND
+				} else {
+					flags |= os.O_TRUNC
+					offset = 0
+				}
+				file, openErr := os.OpenFile(partPath, flags, 0644)
+				if openErr != nil {
+					_ = resp.RawResponse.Body.Close()
+					return fmt.Errorf("创建临时下载文件失败: %w", openErr)
+				}
+				expected := resp.RawResponse.ContentLength
+				totalBytes := expectedTotal
+				if expected >= 0 {
+					if statusCode == http.StatusPartialContent && offset > 0 {
+						totalBytes = offset + expected
+					} else {
+						totalBytes = expected
+					}
+				}
+				downloadedBytes := offset
+				report(downloadedBytes, totalBytes, false)
+				lastReport := time.Now()
+				writer := &progressWriter{
+					writer: file,
+					onWrite: func(written int64) {
+						progressMade = true
+						downloadedBytes += written
+						if time.Since(lastReport) >= 200*time.Millisecond {
+							report(downloadedBytes, totalBytes, false)
+							lastReport = time.Now()
+						}
+					},
+				}
+				written, copyErr := io.Copy(writer, resp.RawResponse.Body)
+				_ = resp.RawResponse.Body.Close()
+				closeFileErr := file.Close()
+				report(downloadedBytes, totalBytes, false)
+				switch {
+				case copyErr != nil:
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					var pathErr *os.PathError
+					if errors.As(copyErr, &pathErr) {
+						return fmt.Errorf("写入下载文件失败: %w", copyErr)
+					}
+					lastErr = copyErr
+				case closeFileErr != nil:
+					return fmt.Errorf("关闭下载文件失败: %w", closeFileErr)
+				case expected >= 0 && written != expected:
+					lastErr = io.ErrUnexpectedEOF
+				default:
+					if err := os.Remove(storePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+						return fmt.Errorf("替换旧文件失败: %w", err)
+					}
+					if err := os.Rename(partPath, storePath); err != nil {
+						return fmt.Errorf("完成下载文件失败: %w", err)
+					}
+					if totalBytes <= 0 {
+						totalBytes = offset + written
+					}
+					report(totalBytes, totalBytes, true)
+					return nil
+				}
+			}
+		}
+
+		attempt++
+		if progressMade {
+			consecutiveNoProgress = 0
+		} else {
+			consecutiveNoProgress++
+		}
+		wait := automaticRetryDelay(consecutiveNoProgress, fastRetries, progressMade)
+		logger.Warn("下载连接中断，后台自动续传", "file", fileName, "attempt", attempt, "wait", wait, "err", lastErr)
+		if m.OnDownloadRetry != nil {
+			m.OnDownloadRetry(DownloadRetry{
+				FileKey:  fileKey,
+				FileName: fileName,
+				Attempt:  attempt,
+				Wait:     wait,
+				Reason:   lastErr.Error(),
+			})
+		}
+		timer := time.NewTimer(wait)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 func (m *EngineManager) SearchForCountResult(ctx context.Context, asmrOneQueryStr string, count int) (model.SearchResult, error) {
@@ -661,7 +964,7 @@ func (m *EngineManager) SearchForCountResult(ctx context.Context, asmrOneQuerySt
 		return result, err
 	}
 	if !resp.IsSuccess() {
-		return result, errors.New("Request error,status code: " + string(resp.StatusCode()))
+		return result, errors.New("Request error,status code: " + strconv.Itoa(resp.StatusCode()))
 	}
 	// 如果结果比较少
 	if result.Pagination.TotalCount > count && count < result.Pagination.PageSize {
@@ -693,7 +996,7 @@ func (m *EngineManager) SearchForCountResult(ctx context.Context, asmrOneQuerySt
 				return newResult, err
 			}
 			if !resp.IsSuccess() {
-				return newResult, errors.New("Request error,status code: " + string(resp.StatusCode()))
+				return newResult, errors.New("Request error,status code: " + strconv.Itoa(resp.StatusCode()))
 			}
 			// 合并结果
 			result.Works = append(result.Works, newResult.Works...)
@@ -826,7 +1129,7 @@ func (m *EngineManager) DownloadHot100(ctx context.Context, count int, dir strin
 	}
 	if !resp.IsSuccess() {
 		logger.RecordFailure("DownloadHot100", url, resp.Status())
-		return errors.New("Request error,status code: " + string(resp.StatusCode()))
+		return errors.New("Request error,status code: " + strconv.Itoa(resp.StatusCode()))
 	}
 	if count <= 0 {
 		return errors.New("下载数量选择必须大于0")

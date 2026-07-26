@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>ASMRoner</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-icon" src="/appicon.png" alt="">
+        <span><strong>ASMRoner</strong><small>DESKTOP AUDIO DESK</small></span>
+      </div>
+      <nav aria-label="主导航">
+        <button class="nav-button active" data-page="library" type="button"><span>⌂</span>资料库<kbd>L</kbd></button>
+        <button class="nav-button" data-page="discover" type="button"><span>◎</span>站点浏览<kbd>S</kbd></button>
+        <button class="nav-button" data-page="tasks" type="button"><span>↓</span>下载任务<b id="taskBadge" hidden>0</b></button>
+        <button class="nav-button" data-page="settings" type="button"><span>⚙</span>设置</button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="online-dot"></span>
+        <span>桌面核心已连接</span>
+        <small id="versionLabel">Wails Desktop</small>
+      </div>
+    </aside>
+
+    <main>
+      <div id="setupNotice" class="setup-notice" hidden>
+        <span>首次使用需要确认账号和下载目录。</span>
+        <button type="button" data-open-settings>现在设置</button>
+      </div>
+
+      <section id="page-library" class="page active">
+        <header class="page-header">
+          <div><p class="overline">YOUR COLLECTION</p><h1>我的声音收藏</h1><p id="librarySummary">正在读取本地资料库…</p></div>
+          <div class="header-actions">
+            <label class="input-shell"><span>⌕</span><input id="libraryFilter" type="search" placeholder="搜索本地作品"></label>
+            <button id="openLibrary" class="button secondary" type="button">打开目录</button>
+          </div>
+        </header>
+        <div id="libraryContent" class="library-layout">
+          <div id="workGrid" class="work-grid" aria-live="polite"></div>
+          <aside id="trackPanel" class="track-panel">
+            <div class="empty-state"><span>♪</span><h2>选择一部作品</h2><p>曲目和播放信息会显示在这里。</p></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="page-discover" class="page">
+        <header class="page-header">
+          <div><p class="overline">NATIVE ASMR.ONE CLIENT</p><h1>站点浏览</h1><p>直接连接站点公开 API，以桌面原生界面浏览、筛选与下载。</p></div>
+          <button id="siteExternal" class="button secondary" type="button">在浏览器打开官网 ↗</button>
+        </header>
+        <div class="site-client">
+          <div class="site-client-bar">
+            <div class="site-identity"><span class="site-dot"></span><span><strong>asmr.one</strong><small>API CONNECTED · NATIVE VIEW</small></span></div>
+            <nav class="site-tabs" aria-label="asmr.one 栏目">
+              <button class="site-tab active" data-site-tab="works" type="button"><span>▦</span>作品</button>
+              <button class="site-tab" data-site-tab="popular" type="button"><span>↗</span>热门</button>
+              <button class="site-tab" data-site-tab="circles" type="button"><span>◉</span>社团</button>
+              <button class="site-tab" data-site-tab="tags" type="button"><span>◇</span>标签</button>
+              <button class="site-tab" data-site-tab="vas" type="button"><span>♬</span>声优</button>
+              <button class="site-tab" data-site-tab="random" type="button"><span>⤨</span>随机</button>
+              <button class="site-tab" data-site-tab="login" type="button"><span>♙</span>登录</button>
+              <button class="site-tab" data-site-tab="about" type="button"><span>i</span>About</button>
+            </nav>
+          </div>
+
+          <div id="siteWorksView" class="site-view">
+            <div class="site-view-heading">
+              <div><p id="siteSectionEyebrow">ALL WORKS</p><h2 id="siteSectionTitle">全部作品</h2></div>
+              <button id="shuffleAgain" class="button secondary" type="button" hidden>再随机一部</button>
+            </div>
+            <form id="searchForm" class="search-bar">
+              <span>⌕</span>
+              <input id="searchInput" type="search" placeholder="搜索标题、社团、标签、声优或 RJ 编号">
+              <button class="button primary" type="submit">搜索</button>
+            </form>
+            <div class="result-toolbar">
+              <span id="searchSummary">正在读取最新作品…</span>
+              <div>
+                <label class="page-size-control">每页
+                  <select id="sitePageSize" aria-label="每页作品数量">
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                  </select>
+                </label>
+                <span id="selectedSummary">已选 0 项</span>
+                <button id="queueSelected" class="button primary" type="button" disabled>加入下载</button>
+              </div>
+            </div>
+            <div id="searchGrid" class="search-grid" aria-live="polite">
+              <div class="empty-state wide"><span>◌</span><h2>正在连接站点</h2><p>作品会以原生卡片形式显示。</p></div>
+            </div>
+            <nav id="searchPagination" class="pagination" aria-label="作品分页" hidden>
+              <button id="searchPrev" class="button secondary" type="button">← 上一页</button>
+              <div><span id="searchPageLabel">第 1 页</span><label>跳转到 <input id="searchPageInput" type="number" min="1" value="1" aria-label="跳转页码"> 页</label></div>
+              <button id="searchNext" class="button secondary" type="button">下一页 →</button>
+            </nav>
+          </div>
+
+          <div id="siteCatalogView" class="site-view" hidden>
+            <div class="catalog-toolbar">
+              <div><p id="catalogEyebrow">DIRECTORY</p><h2 id="catalogTitle">全部社团</h2><span id="catalogSummary"></span></div>
+              <label class="input-shell"><span>⌕</span><input id="catalogFilter" type="search" placeholder="筛选目录"></label>
+            </div>
+            <div id="catalogGrid" class="catalog-grid" aria-live="polite"></div>
+            <nav id="catalogPagination" class="pagination" aria-label="目录分页" hidden>
+              <button id="catalogPrev" class="button secondary" type="button">← 上一页</button>
+              <div><span id="catalogPageLabel">第 1 页</span><label>跳转到 <input id="catalogPageInput" type="number" min="1" value="1" aria-label="跳转目录页码"> 页</label></div>
+              <button id="catalogNext" class="button secondary" type="button">下一页 →</button>
+            </nav>
+          </div>
+
+          <div id="siteDetailView" class="site-view detail-view" hidden>
+            <button id="detailBack" class="detail-back" type="button">← 返回作品列表</button>
+            <div id="detailContent" aria-live="polite">
+              <div class="detail-loading"><div class="detail-cover-skeleton"></div><div><span></span><span></span><span></span></div></div>
+            </div>
+          </div>
+
+          <div id="siteLoginView" class="site-view" hidden>
+            <div class="login-layout">
+              <section class="login-copy" aria-labelledby="siteLoginTitle">
+                <div class="login-brand-mark" aria-hidden="true">♪</div>
+                <p>ASMR.ONE ACCOUNT</p>
+                <h2 id="siteLoginTitle">连接你的站点账号</h2>
+                <span>登录后，浏览与下载请求会使用同一身份。账号信息仅保存在当前用户的桌面配置目录中。</span>
+                <div class="login-benefits" aria-label="登录说明">
+                  <div><b>01</b><span><strong>统一身份</strong><small>站点浏览与下载共用当前账号</small></span></div>
+                  <div><b>02</b><span><strong>本地保存</strong><small>凭据不会提交给本程序以外的服务</small></span></div>
+                </div>
+              </section>
+              <form id="siteLoginForm" class="login-card">
+                <header class="login-card-header">
+                  <div><p>ACCOUNT SIGN IN</p><h3>登录 ASMR.ONE</h3></div>
+                  <div class="login-status"><i></i><span><small>当前账号</small><strong id="loginCurrentAccount">guest</strong></span></div>
+                </header>
+                <label for="siteLoginAccount"><span>账号</span><input id="siteLoginAccount" autocomplete="username" placeholder="输入站点账号" required></label>
+                <label for="siteLoginPassword"><span>密码</span><input id="siteLoginPassword" type="password" autocomplete="current-password" placeholder="输入站点密码" required></label>
+                <div class="login-guest-note"><span>访客模式</span><p>只浏览公开内容时，可以继续使用 <strong>guest / guest</strong>。</p></div>
+                <button id="siteLoginSubmit" class="button primary" type="submit">登录并保存</button>
+                <p id="siteLoginHint" class="login-hint" role="status" aria-live="polite">准备连接站点服务。</p>
+              </form>
+            </div>
+          </div>
+
+          <div id="siteAboutView" class="site-view" hidden>
+            <div class="about-hero">
+              <p>ABOUT ASMR.ONE</p>
+              <h2>站点信息与联系渠道</h2>
+              <span>以下内容由 asmr.one 公开页面提供，并以程序原生组件展示。</span>
+            </div>
+            <div class="about-grid">
+              <article class="about-card"><span>01</span><h3>DMCA / Abuse</h3><p>Please contact <strong>contact#asmr.one</strong> (Replace # with @)</p></article>
+              <article class="about-card featured"><span>02</span><h3>Bug Bounty Program</h3><p>If you find any vulnerability on this site, please contact us: <strong>contact#asmr.one</strong> (Replace # with @).</p><p>Up to <strong>2000 USD</strong> for a single vulnerability, depending on its severity.</p></article>
+              <article class="about-card"><span>03</span><h3>Contact</h3><p>If you have any idea or suggestion，please contact <strong>contact#asmr.one</strong> (Replace # with @)</p></article>
+              <article class="about-card mirror-card"><span>04</span><h3>All mirrors</h3><p>站点公开的备用访问地址。</p><button id="openMirror" class="mirror-link" type="button"><span>as.mr</span><small>在系统浏览器打开 ↗</small></button></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-tasks" class="page">
+        <header class="page-header">
+          <div><p class="overline">DOWNLOADS</p><h1>下载任务</h1><p>任务在桌面核心中运行，切换页面不会中断。</p></div>
+          <button id="refreshTasks" class="button secondary" type="button">刷新</button>
+        </header>
+        <div class="metric-row">
+          <div><strong id="metricRunning">0</strong><span>进行中</span></div>
+          <div><strong id="metricComplete">0</strong><span>已完成</span></div>
+          <div><strong id="metricFailed">0</strong><span>需处理</span></div>
+        </div>
+        <div id="taskBulkToolbar" class="task-bulk-toolbar" hidden>
+          <label class="task-select-all"><input id="taskSelectAll" type="checkbox"><span>全选</span></label>
+          <span id="taskSelectedSummary">已选 0 项</span>
+          <div class="task-bulk-actions">
+            <button id="retrySelectedTasks" class="button secondary" type="button" disabled>重试失败项</button>
+            <button id="cancelSelectedTasks" class="button secondary" type="button" disabled>取消进行中</button>
+            <button id="deleteSelectedTasks" class="button danger" type="button" disabled>删除任务</button>
+          </div>
+        </div>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <section id="page-settings" class="page settings-page">
+        <header class="page-header">
+          <div><p class="overline">PREFERENCES</p><h1>桌面端设置</h1><p>配置保存在当前用户的系统配置目录，不受启动位置影响。</p></div>
+        </header>
+        <div class="settings-layout">
+          <aside class="settings-aside">
+            <strong>偏好设置</strong>
+            <a href="#settings-account">账户</a>
+            <a href="#settings-download">下载</a>
+            <a href="#settings-interface">界面</a>
+            <a href="#settings-network">网络</a>
+            <div><span>配置位置</span><p>当前用户的系统配置目录</p></div>
+          </aside>
+          <form id="settingsForm" class="settings-card">
+            <section id="settings-account" class="settings-section">
+              <header class="settings-section-header"><h2>账户</h2><p>用于连接 asmr.one 服务</p></header>
+              <div class="form-grid">
+                <label><span>账号</span><input id="settingAccount" autocomplete="username" required></label>
+                <label><span>密码</span><input id="settingPassword" type="password" autocomplete="current-password" required></label>
+              </div>
+              <p class="help">默认 guest 账户即可使用公开服务。</p>
+            </section>
+            <section id="settings-download" class="settings-section">
+              <header class="settings-section-header"><h2>下载</h2><p>控制文件保存方式和下载负载</p></header>
+              <label><span>保存位置</span><span class="directory-input"><input id="settingDirectory" required><button id="chooseDirectory" class="button secondary" type="button">选择目录</button></span></label>
+              <div class="form-grid three">
+                <label><span>媒体并发数（1–3）</span><input id="settingWorkers" type="number" min="1" max="3" required></label>
+                <label><span>失败重试</span><input id="settingRetries" type="number" min="0" max="20" required></label>
+                <label><span>请求 QPS</span><input id="settingQps" type="number" min="0.01" step="0.01" required></label>
+              </div>
+              <div class="form-grid">
+                <label><span>优先音频格式</span><select id="settingMedia"><option value="all">全部格式</option><option value="mp3>wav>flac">MP3 优先</option><option value="flac>wav>mp3">FLAC 优先</option><option value="wav>flac>mp3">WAV 优先</option></select></label>
+                <label><span>文件夹命名</span><select id="settingFolderStyle"><option value="full">编号 + 日期 + 字幕 + 标题</option><option value="rj_title">编号 + 标题</option><option value="simple">仅编号</option></select></label>
+              </div>
+              <label class="check-row"><input id="settingSanitize" type="checkbox"><span>自动清理文件名中的系统非法字符</span></label>
+            </section>
+            <section id="settings-interface" class="settings-section">
+              <header class="settings-section-header"><h2>界面</h2><p>控制站点浏览的内容密度</p></header>
+              <div class="form-grid">
+                <label><span>每页作品数量</span><select id="settingPageSize"><option value="20">20 部</option><option value="30">30 部</option><option value="40">40 部</option><option value="50">50 部</option></select></label>
+                <div class="setting-explainer"><span>响应式卡片</span><p>窗口放大后自动增加列数，封面不会被等比拉大。</p></div>
+              </div>
+            </section>
+            <section id="settings-network" class="settings-section">
+              <header class="settings-section-header"><h2>网络</h2><p>通常保持默认即可</p></header>
+              <div class="form-grid">
+                <label><span>自定义 API 地址</span><input id="settingApi" type="url" placeholder="留空则自动选择"></label>
+                <label><span>HTTP / SOCKS5 代理</span><input id="settingProxy" placeholder="例如 socks5://127.0.0.1:1080"></label>
+              </div>
+            </section>
+            <div class="form-actions"><span id="saveHint"></span><button id="saveSettings" class="button primary" type="submit">保存全部设置</button></div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer id="playerBar" class="player-bar" hidden>
+      <div class="now-playing"><span id="nowCover" class="now-cover">♪</span><span><strong id="nowTrack"></strong><small id="nowWork"></small></span></div>
+      <audio id="audioPlayer" controls></audio>
+      <button id="closePlayer" class="close-button" type="button" aria-label="关闭播放器">×</button>
+    </footer>
+  </div>
+  <dialog id="taskDeleteDialog" class="confirm-dialog" aria-labelledby="taskDeleteTitle" aria-describedby="taskDeleteDescription">
+    <form method="dialog">
+      <span class="confirm-icon" aria-hidden="true">×</span>
+      <h2 id="taskDeleteTitle">删除下载任务？</h2>
+      <p id="taskDeleteDescription">只会删除任务记录，已经下载的文件不会被删除。</p>
+      <div>
+        <button class="button secondary" type="submit" value="cancel">取消</button>
+        <button class="button danger" type="submit" value="delete">确认删除</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

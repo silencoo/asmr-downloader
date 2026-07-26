@@ -25,3 +25,7 @@ go.work.sum
 # env file
 .env
 
+# Wails generated bindings and build output
+desktop/frontend/wailsjs/
+desktop/build/bin/
+

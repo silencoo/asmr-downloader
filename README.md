@@ -194,6 +194,6 @@ asmroner/
 
 ## 来源与相关项目
 
-本仓库是在 [silencoo/asmr-downloader](https://github.com/silencoo/asmr-downloader) 基础上的 fork 与二次开发。另可参考相关 Web 客户端 [asmr.furina.in](https://asmr.furina.in)。
+本仓库是在 [fireinrain/asmr-downloader](https://github.com/fireinrain/asmr-downloader) 基础上的 fork 与二次开发。另可参考相关 Web 客户端 [asmr.furina.in](https://asmr.furina.in)。
 
 ASMRoner 与 asmr.one 没有官方隶属关系。请遵守所在地法律、站点规则和内容版权要求。

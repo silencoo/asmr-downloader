@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"asmroner/internal/consts"
+	"asmroner/internal/logger"
 	"bufio"
 	"fmt"
 	"log"
@@ -57,14 +58,14 @@ config 命令用于初始化或重置本程序的配置文件，并以“交互�
 
 		// 创建目录
 		if err := os.MkdirAll(consts.MetaDataDir, 0755); err != nil {
-			log.Fatalf("❌ 无法创建配置目录: %v", err)
+			logger.Fatal("无法创建配置目录", "err", err)
 		}
 
 		// 如果配置存在 → 询问是否重置
 		if _, err := os.Stat(configFile); err == nil {
 			ans := prompt(reader, "⚠️ 检测到配置文件已存在，是否要重置？[y/N]: ", "n")
 			if strings.ToLower(ans) != "y" {
-				log.Println("❌ 已取消操作。")
+				logger.Info("已取消操作")
 				return
 			}
 			os.Remove(configFile)
@@ -76,7 +77,7 @@ config 命令用于初始化或重置本程序的配置文件，并以“交互�
 
 // ------------------------- 核心初始化函数 -------------------------
 func InitConfig(reader *bufio.Reader, configFile string) {
-	log.Println("🛠  正在初始化配置...")
+	logger.Info("正在初始化配置...")
 
 	account := prompt(reader, "用户账号（默认：guest）: ", "guest")
 	password := prompt(reader, "用户密码（默认：guest）: ", "guest")
@@ -125,7 +126,7 @@ func InitConfig(reader *bufio.Reader, configFile string) {
 
 	writeConfig(configFile)
 
-	log.Println("✅ 配置文件已成功保存！")
+	logger.Success("配置文件已成功保存！")
 }
 
 // ------------------------- 输入封装函数 -------------------------
@@ -149,7 +150,7 @@ func promptInt(reader *bufio.Reader, text string, def int) int {
 		if err == nil {
 			return n
 		}
-		fmt.Println("❌ 输入的不是合法整数，请重新输入。")
+		logger.Warn("输入的不是合法整数，请重新输入。")
 	}
 }
 
@@ -161,7 +162,7 @@ func promptFloat(reader *bufio.Reader, text string, def float64) float64 {
 		if err == nil {
 			return n
 		}
-		fmt.Println("❌ 输入的不是合法浮点数，请重新输入。")
+		logger.Warn("输入的不是合法浮点数，请重新输入。")
 	}
 }
 
@@ -177,10 +178,10 @@ func writeConfig(configFile string) {
 			// 已存在 → 删除并重写
 			os.Remove(configFile)
 			if err := viper.WriteConfig(); err != nil {
-				log.Fatalf("❌ 写入配置文件失败: %v", err)
+				logger.Fatal("写入配置文件失败", "err", err)
 			}
 		} else {
-			log.Fatalf("❌ 保存配置文件失败: %v", err)
+			logger.Fatal("保存配置文件失败", "err", err)
 		}
 	}
 }

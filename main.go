@@ -10,10 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
-// the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
-import _ "net/http/pprof"
-
 func main() {
 	utils.EnSureDirExist(consts.MetaDataDir)
 	var versionCmd = &cobra.Command{
@@ -27,8 +23,8 @@ func main() {
 		},
 	}
 	cmd.RegisterCmd(versionCmd)
-	//初始化错误日志记录器
-	logger.InitErrorLogger()
+	// 初始化日志（终端彩色 + 错误日志文件）
+	logger.Init(consts.FailedLogName)
 	defer logger.Close()
 	cmd.Execute()
 }

@@ -2,9 +2,9 @@ package engine
 
 import (
 	"asmroner/internal/consts"
+	"asmroner/internal/logger"
 	"asmroner/internal/model"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -29,18 +29,18 @@ func GetAsmrLatestUrls() ([]string, error) {
 	// 先尝试官方站点
 	resp, err := client.R().Get(officialPublishSite)
 	if err != nil || resp.StatusCode() != 200 {
-		log.Println("尝试访问asmr.one最新站点发布页as.mr失败: ", err.Error())
-		log.Println("当前使用as.131433.xyz代理访问最新站点发布页...")
+		logger.Warn("尝试访问asmr.one最新站点发布页as.mr失败", "err", err.Error())
+		logger.Info("当前使用as.131433.xyz代理访问最新站点发布页")
 		latestPublishSite = cfProxyPublishSite
 	} else {
-		log.Println("当前使用as.mr访问最新站点发布页...")
+		logger.Info("当前使用as.mr访问最新站点发布页")
 		latestPublishSite = officialPublishSite
 	}
 
 	// 访问最新发布页获取 HTML
 	resp, err = client.R().Get(latestPublishSite)
 	if err != nil || resp.StatusCode() != 200 {
-		log.Println("访问asmr.one最新域名发布页出现错误: ", err.Error())
+		logger.Error("访问asmr.one最新域名发布页出现错误", "err", err.Error())
 		return nil, err
 	}
 	bodyText := resp.String()
@@ -54,14 +54,14 @@ func GetAsmrLatestUrls() ([]string, error) {
 	if len(match) > 1 {
 		jsFilePath = match[1]
 	} else {
-		log.Println("JavaScript file path not found in HTML")
+		logger.Warn("JavaScript file path not found in HTML")
 		return nil, fmt.Errorf("js file path not found")
 	}
 
 	jsContentUrl := latestPublishSite + jsFilePath
 	resp, err = client.R().Get(jsContentUrl)
 	if err != nil || resp.StatusCode() != 200 {
-		log.Println("访问asmr.one最新域名发布页js resource出现错误: ", err.Error())
+		logger.Error("访问asmr.one最新域名发布页js resource出现错误", "err", err.Error())
 		return nil, err
 	}
 	jsText := resp.String()
@@ -96,7 +96,7 @@ func GetRespFastestSiteUrl() string {
 
 	latestUrls, err := GetAsmrLatestUrls()
 	if err != nil {
-		log.Println("获取最新域名列表失败: ", err.Error())
+		logger.Warn("获取最新域名列表失败", "err", err.Error())
 		return "https://api.asmr.one" // 默认返回
 	}
 
@@ -118,10 +118,10 @@ func GetRespFastestSiteUrl() string {
 		if fastestResponse == "" || len(response) < len(fastestResponse) {
 			fastestResponse = response
 		}
-		log.Println("Checking Fast Response: ", response)
+		logger.Debug("Checking Fast Response", "url", response)
 	}
 
-	log.Println("Fastest Response is: ", fastestResponse)
+	logger.Debug("Fastest Response", "url", fastestResponse)
 	fastUrls := strings.Split(fastestResponse, "|")
 	url := fastUrls[0]
 	url = strings.Trim(url, "/")

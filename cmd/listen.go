@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"asmroner/internal/database"
+	"asmroner/internal/logger"
 	"asmroner/internal/model"
 	"asmroner/webui"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -67,12 +67,12 @@ listen 命令用于启动一个 Web UI 服务器，用于展示和播放下载�
 		}
 		absDataFolder, err := filepath.Abs(dataFolder)
 		if err != nil {
-			log.Printf("❌ 获取绝对路径失败: %v\n", err)
+			logger.Error("获取绝对路径失败", "err", err)
 			return
 		}
 
 		if _, err := os.Stat(absDataFolder); os.IsNotExist(err) {
-			log.Printf("❌ 数据目录不存在: %s\n", absDataFolder)
+			logger.Error("数据目录不存在", "dir", absDataFolder)
 			return
 		}
 
@@ -83,7 +83,7 @@ listen 命令用于启动一个 Web UI 服务器，用于展示和播放下载�
 		if port == 0 {
 			port = 9999
 		}
-		log.Printf("🚀 启动 Web UI，端口: %d，数据目录: %s\n", port, absDataFolder)
+		logger.Info("启动 Web UI", "port", port, "dir", absDataFolder)
 
 		// Gin Release 模式
 		gin.SetMode(gin.ReleaseMode)
@@ -138,7 +138,7 @@ listen 命令用于启动一个 Web UI 服务器，用于展示和播放下载�
 		// 启动服务器
 		go func() {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("启动失败: %v", err)
+				logger.Fatal("启动失败", "err", err)
 			}
 		}()
 
@@ -153,16 +153,16 @@ listen 命令用于启动一个 Web UI 服务器，用于展示和播放下载�
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 		<-quit
-		log.Println("⚠️ 接收到退出信号，正在优雅关闭服务器...")
+		logger.Warn("接收到退出信号，正在优雅关闭服务器...")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Fatalf("服务器强制关闭: %v", err)
+			logger.Fatal("服务器强制关闭", "err", err)
 		}
 
-		log.Println("✅ 服务器已成功关闭")
+		logger.Success("服务器已成功关闭")
 	},
 }
 
@@ -234,7 +234,7 @@ func buildInmemoryDb(asbDataFolder string) *gorm.DB {
 	//构建内存sqlite数据库
 	db, err := database.NewInMemoryDb()
 	if err != nil {
-		log.Fatalf("Failed to create in-memory SQLite database: %v", err)
+		logger.Fatal("Failed to create in-memory SQLite database", "err", err)
 	}
 	// 自动迁移数据库结构
 	db.AutoMigrate(&FolderInfo{}, &FileInfo{})
@@ -243,7 +243,7 @@ func buildInmemoryDb(asbDataFolder string) *gorm.DB {
 	entries, err := os.ReadDir(asbDataFolder)
 	baseDir := filepath.Base(asbDataFolder)
 	if err != nil {
-		log.Fatalf("Failed to read directory: %v", err)
+		logger.Fatal("Failed to read directory", "err", err)
 	}
 	//下载的数据目录中的文件名必须符合
 	// xxx-8位数字-[sub/nosub]-xxxxx
@@ -263,7 +263,7 @@ func buildInmemoryDb(asbDataFolder string) *gorm.DB {
 
 			directory, err := scanDirectory(filepath.Join(asbDataFolder, entry.Name()))
 			if err != nil {
-				log.Fatalf("Failed to scan directory: %v", err)
+				logger.Fatal("Failed to scan directory", "err", err)
 			}
 			// 构建 FolderInfo
 			folder := FolderInfo{
@@ -277,7 +277,7 @@ func buildInmemoryDb(asbDataFolder string) *gorm.DB {
 			}
 			// 保存到数据库
 			if err := db.Create(&folder).Error; err != nil {
-				log.Fatalf("Failed to save folder %s to database: %v", folder.Name, err)
+				logger.Fatal("Failed to save folder to database", "folder", folder.Name, "err", err)
 			}
 		}
 	}

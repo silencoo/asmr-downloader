@@ -1,5 +1,4 @@
-
-## 📖 项目简介
+## 项目简介
 
 ASMRoner是一款基于Go语言开发的多功能命令行工具，专注于音声作品的搜索、下载、同步。它提供了直观的命令行接口和简单的Web界面，支持高级搜索语法、批量下载、状态跟踪以及统计分析等功能，为ASMR爱好者提供高效便捷的作品下载体验。
 
@@ -7,16 +6,16 @@ ASMRoner是一款基于Go语言开发的多功能命令行工具，专注于音�
 一个简洁干净的听ASMR.ONE的网页
 https://asmr.furina.in
 
-## ✨ 功能特性
+## 功能特性
 
-### 🔍 搜索功能
+### 搜索功能
 - 支持单个RJID搜索
 - 支持批量RJID搜索（逗号分隔）
 - 支持高级搜索语法（关键字过滤、排除词、时长限制等）
 - 搜索结果可导出为CSV/JSON格式
 - 搜索并下载功能一体化
 
-### 📥 下载功能
+### 下载功能
 - 单个RJID下载
 - 批量RJID下载
 - 热门作品下载（hot100模式）
@@ -24,7 +23,7 @@ https://asmr.furina.in
 - 自定义下载目录
 - 自动处理请求调度、限流、重试机制
 
-### 🔄 同步功能
+### 同步功能
 - 元数据同步与管理
 - 批量下载控制
 - 下载状态跟踪（完成、失败、等待）
@@ -32,32 +31,32 @@ https://asmr.furina.in
 - 同步进度统计
 - 下载数据导出
 
-### 🎨 Web界面
+### Web界面
 - 可视化浏览下载作品
 - 浏览器内直接播放音频
 - 响应式设计，适配不同设备
 - 内嵌资源加载，无需额外配置
 
-### ⚙️ 配置管理
+### 配置管理
 - 交互式配置初始化
 - 支持覆盖已有配置
 - 丰富的配置选项（账号、限流、目录等）
 - 配置文件自动管理
 
-### 📊 统计与报告
+### 统计与报告
 - 作品元数据统计
 - 下载状态统计
 - 同步进度分析
 - 详细的下载日志
 
-## 🚀 快速开始
+## 快速开始
 
 ### 安装方法
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/fireinrain/asmroner.git
-cd asmroner
+git clone https://github.com/silencoo/asmr-downloader.git
+cd asmr-downloader
 ```
 
 2. **安装依赖**
@@ -94,9 +93,9 @@ go build -o asmroner
 ./asmroner listen
 ```
 
-## 📋 命令详解
+## 命令详解
 
-### 🔧 config - 配置管理
+### config - 配置管理
 
 ```bash
 # 初始化或重置配置
@@ -116,7 +115,7 @@ go build -o asmroner
 
 配置文件路径：`~/.asmroner/config.toml`
 
-### 🔍 search - 搜索命令
+### search - 搜索命令
 
 ```bash
 # 基本搜索
@@ -143,7 +142,7 @@ go build -o asmroner
     - `-f, --file`：导出文件名（支持.csv/.json）
     - `-n, --num`：导出数量（默认100）
 
-### 📥 download - 下载命令
+### download - 下载命令
 
 ```bash
 # 单个RJID下载
@@ -160,7 +159,7 @@ go build -o asmroner
 - `-d, --dir`：下载保存目录（默认当前目录）
 - `-n, --number`：热门模式下载数量（仅hot100模式有效）
 
-### 🔄 sync - 同步命令
+### sync - 同步命令
 
 ```bash
 # 查看同步命令帮助
@@ -185,7 +184,7 @@ go build -o asmroner
 - `export`：导出下载记录
 - `report`：查看统计报告
 
-### 🎨 listen - Web界面
+### listen - Web界面
 
 ```bash
 # 启动Web界面
@@ -200,14 +199,14 @@ go build -o asmroner
 
 启动后访问：`http://localhost:9999`
 
-### 📊 version - 版本信息
+### version - 版本信息
 
 ```bash
 # 查看版本信息
 ./asmroner version
 ```
 
-## ⚙️ 配置文件
+## 配置文件
 
 配置文件采用TOML格式，默认位于`~/.asmroner/config.toml`。以下是主要配置项：
 
@@ -238,7 +237,7 @@ download_jitter_min = 2000
 download_jitter_max = 5000
 ```
 
-## 📁 项目结构
+## 项目结构
 
 ```
 asmroner/
@@ -265,7 +264,7 @@ asmroner/
 └── version.go         # 版本信息
 ```
 
-## 🛠 技术栈
+## 技术栈
 
 | 技术/组件 | 用途 |
 |---------|------|
@@ -278,7 +277,7 @@ asmroner/
 | Tailwind CSS | Web界面样式 |
 | Plyr    | Web音频播放器 |
 
-## 📊 数据模型
+## 数据模型
 
 ### MetadataWork（作品元数据）
 
@@ -317,7 +316,7 @@ asmroner/
 | RetryCount | int | 重试次数 |
 | FailedAt | time.Time | 最后失败时间 |
 
-## 🔧 常见问题
+## 常见问题
 
 ### 1. 配置文件未找到
 
@@ -345,17 +344,17 @@ asmroner/
 
 ### 5. 使用样图
 
-![样图](dist/config.png)
-![样图](dist/search.png)
-![样图](dist/download.png)
-![样图](dist/listen.png)
-![样图](dist/listen2.png)
-![样图](dist/sync.png)
-![样图](dist/sync-down.png)
-![样图](dist/sync-report.png)
-![样图](dist/sync-retry.png)
+![配置初始化界面](dist/config.png)
+![搜索结果表格](dist/search.png)
+![下载进度](dist/download.png)
+![Web 播放界面](dist/listen.png)
+![Web 播放界面-曲目列表](dist/listen2.png)
+![同步元数据列表](dist/sync.png)
+![同步下载进度](dist/sync-down.png)
+![同步统计报告](dist/sync-report.png)
+![失败下载重试](dist/sync-retry.png)
 
-## 🤝 贡献指南
+## 贡献指南
 
 我们欢迎社区贡献！如果您想为ASMRoner做出贡献，请按照以下步骤：
 
@@ -365,11 +364,11 @@ asmroner/
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启一个Pull Request
 
-## 📄 许可证
+## 许可证
 
 本项目采用MIT许可证，详情请查看LICENSE文件。
 
-## 🙏 致谢
+## 致谢
 
 感谢所有为ASMRoner项目做出贡献的开发者和用户！
 
@@ -377,5 +376,4 @@ asmroner/
 
 **ASMRoner** - 每天晚上都有不同的妹妹陪你入睡:)
 
-*最后更新：2025年12月*
-        
+*最后更新：2026年7月*
